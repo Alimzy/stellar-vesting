@@ -1,0 +1,13 @@
+# cargo-deny configuration. CI runs `check bans sources` as a gate and
+# `check advisories` as an informational job. A license allow-list is an open issue.
+[graph]
+all-features = false
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
