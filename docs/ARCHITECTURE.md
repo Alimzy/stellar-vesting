@@ -51,6 +51,33 @@ Worked example, 1,000 tokens, `start=0`, `cliff=25d`, `end=100d`:
 | day 50 | 500 |
 | day 100 and later | 1,000 |
 
+### Floor rounding with indivisible intervals
+
+Arithmetic uses integer division, truncating down (`floor`). The contract can never over-pay or owe more than it holds because:
+1. For any `now < end`, `elapsed < duration`, so `floor(total * elapsed / duration) < total`.
+2. When `now >= end`, the branch returns `total` exactly, unlocking any remainder that was truncated during linear steps.
+
+#### Example 1: 10 tokens over 3 seconds (`start=0`, `cliff=0`, `end=3`)
+Matches `math::tests::linear_in_the_middle_and_rounds_down` (`vested(10, 0, 0, 3, 1) == Ok(3)`):
+
+| Time (`now`) | Formula | Exact fraction | `vested` (floor) | Incremental new | Notes |
+|---|---|---|---|---|---|
+| 0s | `10 * 0 / 3` | 0.0 | 0 | 0 | Start of schedule |
+| 1s | `10 * 1 / 3` | 3.333... | 3 | +3 | Truncated down from 3.333... |
+| 2s | `10 * 2 / 3` | 6.666... | 6 | +3 | Truncated down from 6.666... |
+| 3s and later | `now >= end` | 10.0 | 10 | +4 | Fully vested, capturing remainder |
+
+At 1s, the beneficiary can claim 3 tokens. At 2s, they can claim 3 more (6 total). At 3s, the final 4 tokens vest. At every step prior to completion, cumulative claims remain strictly below theoretical linear vesting (`3 <= 3.33` and `6 <= 6.67`), guaranteeing contract solvency at every timestamp.
+
+#### Example 2: Cliff with fractional vesting (100 tokens, `start=0`, `cliff=3s`, `end=7s`)
+
+| Time (`now`) | Formula | Exact fraction | `vested` (floor) | Notes |
+|---|---|---|---|---|
+| 2s | `now < cliff` | 0.0 | 0 | Cliff not reached |
+| 3s | `100 * 3 / 7` | 42.857... | 42 | Cliff unlocks linear portion rounded down |
+| 5s | `100 * 5 / 7` | 71.428... | 71 | Rounding down avoids early over-distribution |
+| 7s and later | `now >= end` | 100.0 | 100 | Final settlement |
+
 ## State machine of a schedule
 
 ```mermaid
