@@ -36,6 +36,10 @@ same checks plus the WASM build, so a green `make check` is the bar for a pull r
 - Every state-changing entrypoint extends instance and schedule TTL.
 - Error codes are ABI: never renumber, only append.
 
+## WASM size budget
+
+The optimized release build (`target/wasm32v1-none/release/vesting.wasm`) has a size budget of **23,000 bytes** (current build is ~18.8 KB, leaving ~20% headroom). CI enforces this limit on every PR.
+
 ## Commit style
 
 Short imperative subject, for example `Add event payload snapshot tests`.

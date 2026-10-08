@@ -17,8 +17,16 @@ check:
 build:
 	cargo build --locked --release --target wasm32v1-none -p vesting
 
+MAX_WASM_BYTES ?= 23000
+
 size: build
-	@ls -l target/wasm32v1-none/release/vesting.wasm | awk '{print $$5 " bytes"}'
+	@f=target/wasm32v1-none/release/vesting.wasm; \
+	size=$$(wc -c < "$$f" | tr -d '[:space:]'); \
+	echo "size: $$size bytes (budget: $(MAX_WASM_BYTES) bytes)"; \
+	if [ "$$size" -gt "$(MAX_WASM_BYTES)" ]; then \
+		echo "ERROR: WASM size $$size bytes exceeds budget of $(MAX_WASM_BYTES) bytes"; \
+		exit 1; \
+	fi
 
 clean:
 	cargo clean
