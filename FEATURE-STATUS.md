@@ -17,8 +17,8 @@
 | Overflow reported, not wrapped | Yes | `math::tests::overflow_is_reported_not_wrapped` |
 | Events emitted | Yes | `lifecycle_emits_events` (presence only; payload snapshots are an open issue) |
 | `cargo fmt`, `clippy -D warnings`, tests | Yes | Run locally on Rust 1.85 |
-| Optimized WASM build | CI | `build-wasm` job in `.github/workflows/ci.yml`; not run locally |
-| Testnet deployment and demo | Script ready | **Not run yet.** Run `scripts/demo-testnet.sh` |
+| Optimized WASM build | Yes | `stellar contract build` (16,590 bytes); the `build-wasm` CI job repeats it |
+| Testnet deployment and demo | Yes | Deploy, create, claim, revoke, claim run on testnet; see README proof table and `docs/testnet-proof.md` |
 | Declared MSRV (1.84) builds | Not verified | Open issue |
 | Dependency license allow-list | Not enforced | Open issue |
 | Third-party audit | No | Not audited |

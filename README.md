@@ -74,12 +74,24 @@ links to `docs/testnet-proof.md`.
 
 ## Testnet proof
 
+Produced by `scripts/demo-testnet.sh` on Stellar testnet with native XLM (100 XLM locked, revocable).
+
 | Item | Value |
 |---|---|
 | Network | Testnet |
-| Contract ID | _pending: run `scripts/demo-testnet.sh`, then paste from `docs/testnet-proof.md`_ |
-| WASM hash | _pending_ |
-| Transactions | _pending_ |
+| Contract ID | [`CBF4ZT3QNPAWFMP5A434SS2JPLY3KWCRSP4PCDZNPD6HEOLAMODZSJVL`](https://stellar.expert/explorer/testnet/contract/CBF4ZT3QNPAWFMP5A434SS2JPLY3KWCRSP4PCDZNPD6HEOLAMODZSJVL) |
+| WASM hash | `647bde0980eec5a1d97f746c05592db299d5d83be0bf86d5b7c0dfc5c4b177a7` |
+| Token | native XLM |
+
+| Step | Result | Transaction |
+|---|---|---|
+| deploy | contract created | [`ee13b6b59403...`](https://stellar.expert/explorer/testnet/tx/ee13b6b594038690599598010232d3528bd6274f140a4928c39465bd7a45d135) |
+| create_schedule | 100 XLM locked | [`099ab337bdaf...`](https://stellar.expert/explorer/testnet/tx/099ab337bdaf6fd81b64dd5183aa416221f6d161f81f8121d7efc208a89f335c) |
+| claim | 50.75 XLM paid to beneficiary | [`64c736396131...`](https://stellar.expert/explorer/testnet/tx/64c736396131a15c7545ed0c7a340a71b90d1e161a071873b3582cf201e0f32d) |
+| revoke | 48.75 XLM refunded to funder; 51.25 XLM vested | [`1d6bb339630d...`](https://stellar.expert/explorer/testnet/tx/1d6bb339630d95e433292cfa96ddc6696f2325f7188f721b061a856d725e1422) |
+| claim after revoke | 0.5 XLM that vested before the revoke | [`92731e5ba204...`](https://stellar.expert/explorer/testnet/tx/92731e5ba20430a86a0eb727a9d965bd55c5a8d49b366468a746f1a356e064a2) |
+
+Paid 50.75 + 0.5 and refunded 48.75 add up to the 100 XLM locked.
 
 ## Repository layout
 
