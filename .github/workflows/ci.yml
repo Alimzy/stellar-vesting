@@ -22,6 +22,18 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
 
+  msrv:
+    name: check MSRV (Rust 1.84.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.84.0
+      - run: rustup override set 1.84.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --locked --all-targets
+        env:
+          RUSTUP_TOOLCHAIN: "1.84.0"
+
   build-wasm:
     name: build optimized WASM
     runs-on: ubuntu-latest
