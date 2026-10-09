@@ -1,5 +1,5 @@
-# cargo-deny configuration. CI runs `check bans sources` as a gate and
-# `check advisories` as an informational job. A license allow-list is an open issue.
+# cargo-deny configuration. CI runs `check bans sources licenses` as a gate and
+# `check advisories` as an informational job.
 [graph]
 all-features = false
 
@@ -11,3 +11,19 @@ wildcards = "deny"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[licenses]
+confidence-threshold = 0.8
+unused-allowed-license = "allow"
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+
