@@ -49,13 +49,13 @@ jobs:
           path: target/wasm32v1-none/release/vesting.wasm
 
   deny:
-    name: cargo-deny (bans, sources)
+    name: cargo-deny (bans, sources, licenses)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
-          command: check bans sources
+          command: check bans sources licenses
 
   advisories:
     name: cargo-deny (advisories, informational)
