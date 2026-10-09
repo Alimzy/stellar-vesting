@@ -19,7 +19,7 @@
 | `cargo fmt`, `clippy -D warnings`, tests | Yes | Run locally on Rust 1.85 |
 | Optimized WASM build | Yes | `stellar contract build` (16,590 bytes); the `build-wasm` CI job repeats it |
 | Testnet deployment and demo | Yes | Deploy, create, claim, revoke, claim run on testnet; see README proof table and `docs/testnet-proof.md` |
-| Declared MSRV (1.84) builds | Not verified | Open issue |
+| Declared MSRV (1.84) builds | Yes | Verified in CI (`msrv` job) on Rust 1.84.0 |
 | Dependency license allow-list | Not enforced | Open issue |
 | Third-party audit | No | Not audited |
 
