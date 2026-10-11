@@ -309,6 +309,49 @@ fn every_state_changing_entrypoint_extends_instance_and_schedule_ttl() {
 }
 
 #[test]
+fn restore_archived_schedule_and_claim() {
+    let c = Ctx::new();
+    let id = c.standard();
+
+    let key = crate::types::DataKey::Schedule(id);
+    c.env.as_contract(&c.contract, || {
+        assert_eq!(c.env.storage().persistent().get_ttl(&key), SCHEDULE_BUMP);
+    });
+
+    // Advance time to 50 days (halfway through the 100-day vesting schedule)
+    c.at(50 * DAY);
+
+    // Advance ledger sequence past SCHEDULE_BUMP so the schedule entry expires
+    c.env
+        .ledger()
+        .with_mut(|l| l.sequence_number += SCHEDULE_BUMP + 1);
+
+    // In Soroban Protocol 23 / SDK 25, accessing an archived persistent storage entry
+    // triggers automatic restoration with minimum entry TTL (min_persistent_entry_ttl - 1 = 4095)
+    let min_ttl = c.env.ledger().get().min_persistent_entry_ttl - 1;
+    c.env.as_contract(&c.contract, || {
+        assert_eq!(c.env.storage().persistent().get_ttl(&key), min_ttl);
+    });
+
+    // In Soroban Protocol 23 / SDK 25, invoking the contract (claim) auto-restores
+    // the archived persistent entry and successfully executes the claim
+    let claimed = c.client().claim(&id);
+    assert_eq!(claimed, 500); // 50% of 1000 tokens
+    assert_eq!(c.token().balance(&c.beneficiary), 500);
+
+    // After claim, the entry has been restored and its TTL extended back to SCHEDULE_BUMP
+    c.env.as_contract(&c.contract, || {
+        assert_eq!(c.env.storage().persistent().get_ttl(&key), SCHEDULE_BUMP);
+    });
+
+    // A subsequent claim at day 100 succeeds and claims the remaining balance
+    c.at(100 * DAY);
+    let final_claim = c.client().claim(&id);
+    assert_eq!(final_claim, 500);
+    assert_eq!(c.token().balance(&c.beneficiary), 1_000);
+}
+
+#[test]
 fn lifecycle_emits_events() {
     let c = Ctx::new();
     let id = c.standard();
