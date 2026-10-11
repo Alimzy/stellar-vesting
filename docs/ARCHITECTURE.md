@@ -100,6 +100,9 @@ passing no longer vests anything.
 **claim**: load, auth beneficiary, compute `vested - claimed`, reject if zero, write
 `claimed`, extend TTL, *then* transfer to beneficiary, emit `Claimed`.
 
+**transfer_beneficiary**: load, auth current beneficiary, update beneficiary to
+`new_beneficiary`, save schedule, extend TTL, emit `BeneficiaryTransferred`.
+
 **revoke**: load, auth funder, require revocable and not already revoked, compute vested,
 freeze it, extend TTL, *then* refund `total - vested` to funder, emit `Revoked`.
 
@@ -110,8 +113,8 @@ call fails, the whole invocation reverts, so there is no partial state.
 
 | Entry | Extended by | Bumped to | When fewer than |
 |---|---|---|---|
-| Instance | `create_schedule`, `claim`, `revoke`, `bump` | ~30 days | ~29 days remain |
-| `Schedule(id)` | `create_schedule` (own id), `claim`, `revoke`, `bump` | ~90 days | ~89 days remain |
+| Instance | `create_schedule`, `claim`, `transfer_beneficiary`, `revoke`, `bump` | ~30 days | ~29 days remain |
+| `Schedule(id)` | `create_schedule` (own id), `claim`, `transfer_beneficiary`, `revoke`, `bump` | ~90 days | ~89 days remain |
 
 Read-only views do not extend TTL, so they stay free of write cost in simulation.
 Because every state-changing entrypoint and the permissionless `bump` extend **both** entries,
@@ -128,6 +131,7 @@ restoring costs a transaction, so the policy above avoids needing it.
 |---|---|
 | `create_schedule` | funder (plus the token's own transfer auth, covered by the same signature) |
 | `claim` | beneficiary |
+| `transfer_beneficiary` | beneficiary |
 | `revoke` | funder |
 | `bump`, views | none |
 
@@ -140,6 +144,7 @@ changed after deployment by anyone.
 |---|---|---|
 | `ScheduleCreated` | `id`, `beneficiary` | `funder`, `token`, `amount`, `start`, `cliff`, `end`, `revocable` |
 | `Claimed` | `id`, `beneficiary` | `amount` |
+| `BeneficiaryTransferred` | `id`, `old_beneficiary` | `new_beneficiary` |
 | `Revoked` | `id`, `funder` | `refunded`, `vested` |
 
 ## Design decisions

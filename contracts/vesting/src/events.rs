@@ -38,3 +38,13 @@ pub struct Revoked {
     /// Tokens that had vested and stay claimable by the beneficiary.
     pub vested: i128,
 }
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BeneficiaryTransferred {
+    #[topic]
+    pub id: u64,
+    #[topic]
+    pub old_beneficiary: Address,
+    pub new_beneficiary: Address,
+}

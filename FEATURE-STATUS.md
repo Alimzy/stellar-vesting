@@ -11,6 +11,7 @@
 | Repeated claims bounded by total | Yes | `repeated_claims_never_pay_more_than_total`, property test |
 | Revoke (refund unvested, keep vested) | Yes | `revoke_*` tests, `revoke_conserves_tokens` property test |
 | Non-revocable and double-revoke guards | Yes | `cannot_revoke_twice_or_a_non_revocable_schedule` |
+| Beneficiary transfer | Yes | `transfer_beneficiary_updates_beneficiary_and_preserves_claim`, `required_signers_are_exactly_the_right_parties` |
 | Schedule isolation | Yes | `schedules_in_one_contract_are_isolated` |
 | Correct signer per entrypoint | Yes | `required_signers_are_exactly_the_right_parties` |
 | TTL extension on every state-changing entrypoint | Yes | `every_state_changing_entrypoint_extends_instance_and_schedule_ttl` |
@@ -26,4 +27,3 @@
 ## Known limits
 
 - Tokens must behave like standard SEP-41 tokens. Fee-on-transfer or rebasing tokens break per-schedule accounting; see `docs/SECURITY-MODEL.md`.
-- Schedules cannot be transferred to a new beneficiary yet (open issue).

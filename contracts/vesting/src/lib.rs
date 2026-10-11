@@ -25,7 +25,7 @@ use soroban_sdk::{contract, contractimpl, token::TokenClient, Address, Env};
 pub use error::Error;
 pub use types::Schedule;
 
-use events::{Claimed, Revoked, ScheduleCreated};
+use events::{BeneficiaryTransferred, Claimed, Revoked, ScheduleCreated};
 
 #[contract]
 pub struct VestingContract;
@@ -126,6 +126,29 @@ impl VestingContract {
         .publish(&env);
 
         Ok(amount)
+    }
+
+    /// Transfer the beneficiary role of schedule `id` to `new_beneficiary`.
+    /// Requires the current beneficiary's authorization.
+    pub fn transfer_beneficiary(env: Env, id: u64, new_beneficiary: Address) -> Result<(), Error> {
+        let mut schedule = storage::load(&env, id)?;
+        schedule.beneficiary.require_auth();
+
+        let old_beneficiary = schedule.beneficiary.clone();
+        schedule.beneficiary = new_beneficiary.clone();
+
+        storage::save(&env, id, &schedule);
+        storage::extend_instance(&env);
+        storage::extend_schedule(&env, id);
+
+        BeneficiaryTransferred {
+            id,
+            old_beneficiary,
+            new_beneficiary,
+        }
+        .publish(&env);
+
+        Ok(())
     }
 
     /// Stop vesting and return the unvested remainder to the funder.

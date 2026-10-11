@@ -213,9 +213,14 @@ fn invalid_parameters_are_rejected() {
 #[test]
 fn unknown_schedule_ids_fail_cleanly() {
     let c = Ctx::new();
+    let other = Address::generate(&c.env);
     assert_eq!(c.client().try_claim(&7), Err(Ok(Error::ScheduleNotFound)));
     assert_eq!(c.client().try_revoke(&7), Err(Ok(Error::ScheduleNotFound)));
     assert_eq!(c.client().try_bump(&7), Err(Ok(Error::ScheduleNotFound)));
+    assert_eq!(
+        c.client().try_transfer_beneficiary(&7, &other),
+        Err(Ok(Error::ScheduleNotFound))
+    );
     assert_eq!(
         c.client().try_get_schedule(&7),
         Err(Ok(Error::ScheduleNotFound))
@@ -248,6 +253,38 @@ fn schedules_in_one_contract_are_isolated() {
 }
 
 #[test]
+fn transfer_beneficiary_updates_beneficiary_and_preserves_claim() {
+    let c = Ctx::new();
+    let id = c.standard();
+    let new_beneficiary = Address::generate(&c.env);
+
+    // Initial state: old beneficiary claims partial vested tokens
+    c.at(40 * DAY);
+    assert_eq!(c.client().claim(&id), 400);
+    assert_eq!(c.token().balance(&c.beneficiary), 400);
+
+    // Transfer beneficiary to new_beneficiary
+    c.client().transfer_beneficiary(&id, &new_beneficiary);
+
+    let schedule = c.client().get_schedule(&id);
+    assert_eq!(schedule.beneficiary, new_beneficiary);
+    assert_eq!(schedule.claimed, 400);
+
+    // New beneficiary claims newly vested tokens
+    c.at(60 * DAY);
+    assert_eq!(c.client().claimable(&id), 200);
+    assert_eq!(c.client().claim(&id), 200);
+    assert_eq!(c.token().balance(&new_beneficiary), 200);
+    assert_eq!(c.token().balance(&c.beneficiary), 400);
+
+    // Further claims at schedule end pay remaining to new_beneficiary
+    c.at(100 * DAY);
+    assert_eq!(c.client().claim(&id), 400);
+    assert_eq!(c.token().balance(&new_beneficiary), 600);
+    assert_eq!(c.token().balance(&c.contract), 0);
+}
+
+#[test]
 fn required_signers_are_exactly_the_right_parties() {
     let c = Ctx::new();
     let id = c.standard();
@@ -255,6 +292,12 @@ fn required_signers_are_exactly_the_right_parties() {
 
     c.at(50 * DAY);
     c.client().claim(&id);
+    let auths = c.env.auths();
+    assert_eq!(auths.len(), 1);
+    assert_eq!(auths[0].0, c.beneficiary);
+
+    let new_beneficiary = Address::generate(&c.env);
+    c.client().transfer_beneficiary(&id, &new_beneficiary);
     let auths = c.env.auths();
     assert_eq!(auths.len(), 1);
     assert_eq!(auths[0].0, c.beneficiary);
@@ -297,6 +340,12 @@ fn every_state_changing_entrypoint_extends_instance_and_schedule_ttl() {
     c.client().bump(&id);
     assert_eq!(ttl(&c), (INSTANCE_BUMP, SCHEDULE_BUMP));
 
+    // transfer_beneficiary
+    let new_beneficiary = Address::generate(&c.env);
+    age(&c, 20 * 17_280);
+    c.client().transfer_beneficiary(&id, &new_beneficiary);
+    assert_eq!(ttl(&c), (INSTANCE_BUMP, SCHEDULE_BUMP));
+
     // revoke
     age(&c, 20 * 17_280);
     c.client().revoke(&id);
@@ -319,6 +368,11 @@ fn lifecycle_emits_events() {
     c.client().claim(&id);
     let after_claim = c.env.events().all().events().len();
     assert!(after_claim >= 1);
+
+    let new_beneficiary = Address::generate(&c.env);
+    c.client().transfer_beneficiary(&id, &new_beneficiary);
+    let after_transfer = c.env.events().all().events().len();
+    assert!(after_transfer >= 1);
 }
 
 // ---------------------------------------------------------------- properties
