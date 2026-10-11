@@ -310,15 +310,123 @@ fn every_state_changing_entrypoint_extends_instance_and_schedule_ttl() {
 
 #[test]
 fn lifecycle_emits_events() {
+    use crate::events::{Claimed, Revoked, ScheduleCreated};
+    use soroban_sdk::{events::Event, vec, IntoVal, Map, Symbol, Val, Vec};
+
     let c = Ctx::new();
     let id = c.standard();
-    let after_create = c.env.events().all().events().len();
-    assert!(after_create >= 1);
 
+    // 1. ScheduleCreated
+    let expected_create = ScheduleCreated {
+        id,
+        beneficiary: c.beneficiary.clone(),
+        funder: c.funder.clone(),
+        token: c.token.clone(),
+        amount: 1_000,
+        start: 0,
+        cliff: 25 * DAY,
+        end: 100 * DAY,
+        revocable: true,
+    };
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        std::vec![expected_create.to_xdr(&c.env, &c.contract)],
+    );
+
+    let create_topics: Vec<Val> = (
+        Symbol::new(&c.env, "schedule_created"),
+        id,
+        c.beneficiary.clone(),
+    )
+        .into_val(&c.env);
+    let mut create_data = Map::<Symbol, Val>::new(&c.env);
+    create_data.set(Symbol::new(&c.env, "amount"), 1_000i128.into_val(&c.env));
+    create_data.set(Symbol::new(&c.env, "cliff"), (25 * DAY).into_val(&c.env));
+    create_data.set(Symbol::new(&c.env, "end"), (100 * DAY).into_val(&c.env));
+    create_data.set(
+        Symbol::new(&c.env, "funder"),
+        c.funder.clone().into_val(&c.env),
+    );
+    create_data.set(Symbol::new(&c.env, "revocable"), true.into_val(&c.env));
+    create_data.set(Symbol::new(&c.env, "start"), 0u64.into_val(&c.env));
+    create_data.set(
+        Symbol::new(&c.env, "token"),
+        c.token.clone().into_val(&c.env),
+    );
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        vec![
+            &c.env,
+            (
+                c.contract.clone(),
+                create_topics,
+                create_data.into_val(&c.env)
+            )
+        ]
+    );
+
+    // 2. Claimed
     c.at(50 * DAY);
-    c.client().claim(&id);
-    let after_claim = c.env.events().all().events().len();
-    assert!(after_claim >= 1);
+    let claimed_amount = c.client().claim(&id);
+    assert_eq!(claimed_amount, 500);
+
+    let expected_claim = Claimed {
+        id,
+        beneficiary: c.beneficiary.clone(),
+        amount: 500,
+    };
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        std::vec![expected_claim.to_xdr(&c.env, &c.contract)],
+    );
+
+    let claim_topics: Vec<Val> =
+        (Symbol::new(&c.env, "claimed"), id, c.beneficiary.clone()).into_val(&c.env);
+    let mut claim_data = Map::<Symbol, Val>::new(&c.env);
+    claim_data.set(Symbol::new(&c.env, "amount"), 500i128.into_val(&c.env));
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        vec![
+            &c.env,
+            (
+                c.contract.clone(),
+                claim_topics,
+                claim_data.into_val(&c.env)
+            )
+        ]
+    );
+
+    // 3. Revoked
+    let refunded = c.client().revoke(&id);
+    assert_eq!(refunded, 500);
+
+    let expected_revoke = Revoked {
+        id,
+        funder: c.funder.clone(),
+        refunded: 500,
+        vested: 500,
+    };
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        std::vec![expected_revoke.to_xdr(&c.env, &c.contract)],
+    );
+
+    let revoke_topics: Vec<Val> =
+        (Symbol::new(&c.env, "revoked"), id, c.funder.clone()).into_val(&c.env);
+    let mut revoke_data = Map::<Symbol, Val>::new(&c.env);
+    revoke_data.set(Symbol::new(&c.env, "refunded"), 500i128.into_val(&c.env));
+    revoke_data.set(Symbol::new(&c.env, "vested"), 500i128.into_val(&c.env));
+    assert_eq!(
+        c.env.events().all().filter_by_contract(&c.contract),
+        vec![
+            &c.env,
+            (
+                c.contract.clone(),
+                revoke_topics,
+                revoke_data.into_val(&c.env)
+            )
+        ]
+    );
 }
 
 // ---------------------------------------------------------------- properties

@@ -15,7 +15,7 @@
 | Correct signer per entrypoint | Yes | `required_signers_are_exactly_the_right_parties` |
 | TTL extension on every state-changing entrypoint | Yes | `every_state_changing_entrypoint_extends_instance_and_schedule_ttl` |
 | Overflow reported, not wrapped | Yes | `math::tests::overflow_is_reported_not_wrapped` |
-| Events emitted | Yes | `lifecycle_emits_events` (presence only; payload snapshots are an open issue) |
+| Events emitted | Yes | `lifecycle_emits_events` (exact topics and data payloads verified for `ScheduleCreated`, `Claimed`, and `Revoked`) |
 | `cargo fmt`, `clippy -D warnings`, tests | Yes | Run locally on Rust 1.85 |
 | Optimized WASM build | Yes | `stellar contract build` (16,590 bytes); the `build-wasm` CI job repeats it |
 | Testnet deployment and demo | Yes | Deploy, create, claim, revoke, claim run on testnet; see README proof table and `docs/testnet-proof.md` |
