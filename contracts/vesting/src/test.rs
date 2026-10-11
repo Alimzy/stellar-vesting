@@ -2,6 +2,7 @@ extern crate std;
 
 use proptest::prelude::*;
 use soroban_sdk::{
+    contract, contractimpl, symbol_short,
     testutils::{
         storage::Instance as _, storage::Persistent as _, Address as _, Events as _, Ledger,
     },
@@ -319,6 +320,109 @@ fn lifecycle_emits_events() {
     c.client().claim(&id);
     let after_claim = c.env.events().all().events().len();
     assert!(after_claim >= 1);
+}
+
+#[contract]
+struct FailingToken;
+
+#[contractimpl]
+impl FailingToken {
+    pub fn set_fail(env: Env, fail: bool) {
+        env.storage().instance().set(&symbol_short!("fail"), &fail);
+    }
+
+    pub fn transfer(env: Env, _from: Address, _to: Address, _amount: i128) {
+        let fail: bool = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("fail"))
+            .unwrap_or(true);
+        if fail {
+            panic!("transfer failed");
+        }
+    }
+}
+
+#[test]
+fn failing_token_transfer_rolls_back_all_state() {
+    let c = Ctx::new();
+    let failing_token_addr = c.env.register(FailingToken, ());
+    let failing_token = FailingTokenClient::new(&c.env, &failing_token_addr);
+
+    // 1. create_schedule rolls back on failing transfer:
+    // schedule_count is not incremented and no schedule record is stored.
+    failing_token.set_fail(&true);
+    let create_res = c.client().try_create_schedule(
+        &c.funder,
+        &c.beneficiary,
+        &failing_token_addr,
+        &1_000,
+        &0,
+        &(25 * DAY),
+        &(100 * DAY),
+        &true,
+    );
+    assert!(create_res.is_err());
+    assert_eq!(c.client().schedule_count(), 0);
+    assert_eq!(
+        c.client().try_get_schedule(&0),
+        Err(Ok(Error::ScheduleNotFound))
+    );
+
+    // Now permit creation so we have a valid schedule to exercise claim and revoke.
+    failing_token.set_fail(&false);
+    let id = c.client().create_schedule(
+        &c.funder,
+        &c.beneficiary,
+        &failing_token_addr,
+        &1_000,
+        &0,
+        &(25 * DAY),
+        &(100 * DAY),
+        &true,
+    );
+    assert_eq!(id, 0);
+    assert_eq!(c.client().schedule_count(), 1);
+
+    let initial_schedule = c.client().get_schedule(&id);
+    assert_eq!(initial_schedule.claimed, 0);
+    assert!(!initial_schedule.revoked);
+
+    // 2. claim rolls back on failing transfer:
+    // claimed amount is unchanged in storage even though effects run before transfer.
+    c.at(50 * DAY);
+    assert_eq!(c.client().claimable(&id), 500);
+
+    failing_token.set_fail(&true);
+    let claim_res = c.client().try_claim(&id);
+    assert!(claim_res.is_err());
+
+    let schedule_after_claim_fail = c.client().get_schedule(&id);
+    assert_eq!(schedule_after_claim_fail.claimed, 0);
+    assert_eq!(schedule_after_claim_fail, initial_schedule);
+
+    // 3. revoke rolls back on failing transfer:
+    // revoked flag and vested_at_revoke are unchanged in storage.
+    let revoke_res = c.client().try_revoke(&id);
+    assert!(revoke_res.is_err());
+
+    let schedule_after_revoke_fail = c.client().get_schedule(&id);
+    assert!(!schedule_after_revoke_fail.revoked);
+    assert_eq!(schedule_after_revoke_fail.vested_at_revoke, 0);
+    assert_eq!(schedule_after_revoke_fail, initial_schedule);
+
+    // After failure rollback, subsequent valid operations continue to succeed.
+    failing_token.set_fail(&false);
+    assert_eq!(c.client().claim(&id), 500);
+    let schedule_after_claim = c.client().get_schedule(&id);
+    assert_eq!(schedule_after_claim.claimed, 500);
+    assert!(!schedule_after_claim.revoked);
+
+    assert_eq!(c.client().revoke(&id), 500);
+    let schedule_after_revoke = c.client().get_schedule(&id);
+    assert!(schedule_after_revoke.revoked);
+    assert_eq!(schedule_after_revoke.claimed, 500);
+    assert_eq!(schedule_after_revoke.vested_at_revoke, 500);
 }
 
 // ---------------------------------------------------------------- properties
