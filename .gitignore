@@ -5,3 +5,5 @@
 *.wasm
 .env
 test_snapshots/
+node_modules/
+dist/

@@ -72,6 +72,18 @@ The script creates funded testnet identities, deploys the contract, creates a sc
 XLM, claims, revokes, claims the vested remainder, and writes the contract ID and transaction
 links to `docs/testnet-proof.md`.
 
+### TypeScript example (@stellar/stellar-sdk)
+
+An end-to-end TypeScript script demonstrating `create_schedule`, `claimable`, and `claim` using `@stellar/stellar-sdk`:
+
+```bash
+cd examples/ts
+npm install
+npm start
+```
+
+Runs out of the box with auto-funded testnet identities via Friendbot, or accepts an existing funded key via `STELLAR_SECRET_KEY="S..." npm start`. See [`examples/ts/README.md`](examples/ts/README.md) for configuration details.
+
 ## Testnet proof
 
 Produced by `scripts/demo-testnet.sh` on Stellar testnet with native XLM (100 XLM locked, revocable).
